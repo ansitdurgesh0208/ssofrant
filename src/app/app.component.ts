@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { filter, take } from 'rxjs/operators';
+import { AuthService } from './service/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +12,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isAuthenticated: boolean;
   userData: any;
   constructor(
+    private _AuthService: AuthService,
     private oidcSecurityService: OidcSecurityService
   ) {
     if (this.oidcSecurityService.moduleSetup) {
@@ -26,13 +27,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
 
   ngOnInit() {
-    this.oidcSecurityService.getIsAuthorized().subscribe(auth => {
+    this._AuthService.getIsAuthorized().subscribe(auth => {
       this.isAuthenticated = auth;
     });
 
-    this.oidcSecurityService.getUserData().subscribe(userData => {
-      this.userData = userData;
-    });
+    // this._AuthService.getUserData().subscribe(userData => {
+    //   this.userData = userData;
+    // });
 
   }
   ngOnDestroy() {
@@ -41,11 +42,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   login() {
     debugger;
-    this.oidcSecurityService.authorize();
+    this._AuthService.login();
   }
 
   logout() {
-    this.oidcSecurityService.logoff();
+    this._AuthService.logout();
   }
 
   doCallbackLogicIfRequired() {
