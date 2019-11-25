@@ -1,18 +1,68 @@
+import { HttpClientModule } from '@angular/common/http';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { NgModule } from '@angular/core';
-
-import { AppRoutingModule } from './app-routing.module';
+import { RouterModule } from '@angular/router';
+import { AuthModule, ConfigResult, OidcConfigService, OidcSecurityService, OpenIdConfiguration } from 'angular-auth-oidc-client';
 import { AppComponent } from './app.component';
+import { AppRoutingModule } from './app-routing.module';
 
+const oidc_configuration = 'assets/auth.clientConfiguration.json';
+// if your config is on server side
+// const oidc_configuration = ${window.location.origin}/api/ClientAppSettings
+
+export function loadConfig(oidcConfigService: OidcConfigService) {
+  return () => oidcConfigService.load(oidc_configuration);
+}
 @NgModule({
   declarations: [
     AppComponent
   ],
   imports: [
     BrowserModule,
-    AppRoutingModule
+    HttpClientModule,
+    AppRoutingModule,
+    RouterModule.forRoot([
+      { path: '', component: AppComponent },
+      { path: 'home', component: AppComponent },
+      { path: 'forbidden', component: AppComponent },
+      { path: 'unauthorized', component: AppComponent },
+    ]),
+    AuthModule.forRoot(),
   ],
-  providers: [],
+  providers: [
+    OidcConfigService,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: loadConfig,
+      deps: [OidcConfigService],
+      multi: true,
+    },
+  ],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {
+  constructor(
+    private oidcSecurityService: OidcSecurityService,
+    private oidcConfigService: OidcConfigService
+  ) {
+    this.oidcConfigService.onConfigurationLoaded.subscribe((configResult: ConfigResult) => {
+
+      // Use the configResult to set the configurations
+
+      const config: OpenIdConfiguration = {
+        stsServer: configResult.customConfig.stsServer,
+        redirect_url: 'http://localhost:4200/',
+        client_id: 'nsh',
+        scope: 'openid profile nshApp',
+        response_type: 'id_token',
+        silent_renew: true,
+        silent_renew_url: 'http://localhost:4200/silent-renew.html',
+        log_console_debug_active: true,
+
+      };
+
+      this.oidcSecurityService.setupModule(config, configResult.authWellknownEndpoints);
+    });
+  }
+
+}
